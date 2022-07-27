@@ -1,4 +1,24 @@
 version: '3'
+
+x-airflow-common:
+  &airflow-common
+  image: 'apache/airflow:2.3.3-python3.8'
+  # build: .
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor # Using local executor for simplicity
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres_airflow/airflow
+    # For backward compatibility, with Airflow <2.3
+    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres_airflow/airflow
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres_airflow/airflow
+    AIRFLOW__CELERY__BROKER_URL: redis://:@redis_airflow:6379/0
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
+    AIRFLOW__WEBSERVER__SECRET_KEY: key # Need to do this so secret_key is the same across webserver and scheduler. can't view logs through web ui otherwise
+  volumes:
+  - ./dags:/opt/airflow/dags
+
 services:
   postgres_one:
     ports:
@@ -28,24 +48,6 @@ services:
     image: redis:latest
     ports:
     - 6379:6379
-  x-airflow-common:
-    &airflow-common
-    image: 'apache/airflow:2.3.3-python3.8'
-    # build: .
-    environment:
-      &airflow-common-env
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor # Using local executor for simplicity
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres_airflow/airflow
-      # For backward compatibility, with Airflow <2.3
-      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres_airflow/airflow
-      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres_airflow/airflow
-      AIRFLOW__CELERY__BROKER_URL: redis://:@redis_airflow:6379/0
-      AIRFLOW__CORE__FERNET_KEY: ''
-      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-      AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
-      AIRFLOW__WEBSERVER__SECRET_KEY: key # Need to do this so secret_key is the same across webserver and scheduler. can't view logs through web ui otherwise
-    volumes:
-    - ./dags:/opt/airflow/dags
   airflow-init:
     <<: *airflow-common
     command: ["db", "init"]

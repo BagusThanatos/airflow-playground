@@ -1,6 +1,6 @@
 # Requirements:
 - docker
-- docker-compose
+- docker-compose >= 2.6.1
 
 
 # Start up:
